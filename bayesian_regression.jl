@@ -1,5 +1,7 @@
 # Import Turing and Distributions.
 using Turing, Distributions
+# GLM for comparison
+using GLM
 # Import RDatasets.
 using RDatasets
 # Import MCMCChains, Plots, and StatPlots for visualizations and diagnostics.
@@ -29,6 +31,9 @@ end
 y_train, X_train = split_iv_dv(train)
 y_test, X_test = split_iv_dv(test)
 
+# OLS for comparison
+ols = lm(@formula(Len ~ Supp * Dose), train)
+
 # define the generative function
 @model function linear_regression(y, X)
     # construct interaction term
@@ -45,10 +50,25 @@ y_test, X_test = split_iv_dv(test)
     y ~ MvNormal(mu, e)
 end
 
+# prior check, plot sample from prior
+prior_sample = sample(
+    linear_regression(y_train, X_train),
+    Prior(),
+    1000
+)
+plot(prior_sample)
+describe(prior_sample)
+
+# NUTS sampling posterior
 ch = sample(
     linear_regression(y_train, X_train),
     NUTS(.65),
     1000
 )
 
+# visualize the samples
 plot(ch)
+# summarize the samples
+describe(ch)
+
+## check against hold-out data
